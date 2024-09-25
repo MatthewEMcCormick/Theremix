@@ -10,19 +10,36 @@
 #include <stdint.h>
 const char* username = "lmoloney";
 
-volatile int activeSetting = 0;
-volatile int Settings[2];
-char* Setting = "2:Sat 3:Com";
+int activeSetting = 0; //If running into errors maybe make this volatile
+int Settings[12];
+int currentPage = 0;
+char* currentSetting = "";
 
 
-void initc();
-void initb();
+void initc(void);
+void initb(void);
 void togglexn(GPIO_TypeDef *port, int n);
-void init_exti();
+void init_exti(void);
 void set_col(int col);
-void SysTick_Handler();
-void init_systick();
-void adjust_priorities();
+void SysTick_Handler(void);
+void adjust_priorities(void);
+void nano_wait(unsigned int n);
+
+void init_spi1(void);
+void spi_cmd(unsigned int data);
+void spi_data(unsigned int data);
+void spi1_init_oled(void);
+void spi1_display1(const char *string);
+void spi1_display2(const char *string);
+void spi1_setup_dma(void);
+void spi1_enable_dma(void);
+
+void change_message(int page);
+
+void setup_adc(void);
+void TIM2_IRQHandler(void);
+void init_tim2(void);
+
 
 // extern void autotest();
 extern void internal_clock();
@@ -40,8 +57,8 @@ int main(void) {
     
     // initb(); // B really only handled the 7 segment display which im not actually using right now. Might be better to just comment out
     initc();
-    // init_exti();
-    init_systick();
+    init_exti();
+    // init_systick();
     // adjust_priorities();
     init_spi1();
     spi1_init_oled();
@@ -57,21 +74,19 @@ int main(void) {
     // }
 }
 
-/**
- * @brief Init GPIO port C
- *        PC0-PC3 as input pins with the pull down resistor enabled
- *        PC4-PC9 as output pins
- * 
- */
 void initc() {
-  RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-  for (int i = 0; i <= 9; i++) {
-    GPIOC->MODER &= ~(3 << 2*i);
-    GPIOC->PUPDR &= ~(3 << 2*i);
-  }
-  GPIOC->MODER |= (1 << 9*2) | (1 << 8*2) | (1 << 7*2) | (1 << 6*2) | (1 << 5*2) | (1 << 4*2);
-  GPIOC->PUPDR |= (2 << 3*2) | (2 << 2*2) | (2 << 1*2) | (2 << 0*2);
+    // Enable GPIOC clock
+    RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+
+    // Set PC10 and PC11 as input (00 in MODER)
+    GPIOC->MODER &= ~(3 << (10 * 2)); // PC10 as input
+    GPIOC->MODER &= ~(3 << (11 * 2)); // PC11 as input
+
+    // Enable pull-up resistors for PC10 and PC11
+    GPIOC->PUPDR |= (1 << (10 * 2));  // Pull-up for PC10
+    GPIOC->PUPDR |= (1 << (11 * 2));  // Pull-up for PC11
 }
+
 
 /**
  * @brief Init GPIO port B
@@ -80,15 +95,7 @@ void initc() {
  *        PB8-PB11 as output pins
  * 
  */
-void initb() {
-  RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-  GPIOB->MODER &= ~((3 << 2*0) | (3 << 2*2) | (3 << 2*3) | (3 << 2*4));
-  GPIOB->PUPDR &= ~((3 << 2*2) | (3 << 2*3));
-  GPIOB->PUPDR |= (2 << 2*2) | (2 << 2*3);
 
-  GPIOB->MODER &= ~((3 << 2*8) | (3 << 2*9) | (3 << 2*10) | (3 << 2*11));
-  GPIOB->MODER |= (1 << 2*8) | (1 << 2*9) | (1 << 2*10) | (1 << 2*11);
-}
 
 /**
  * @brief Change the ODR value from 0 to 1 or 1 to 0 for a specified 
@@ -114,14 +121,24 @@ void togglexn(GPIO_TypeDef *port, int n) {
  *            4-15. Don't enable any other interrupts.
  */
 void init_exti() {
-  RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN; 
-  SYSCFG->EXTICR[0] &= ~((0xF << 0*4) | (0xF << 2*4) | (0xF << 3*4));
-  SYSCFG->EXTICR[1] &= ~((0xF << (4-4)*4));
-  SYSCFG->EXTICR[0] |= (1 << 0*4) | (1 << 2*4) | (1 << 3*4);
-  SYSCFG->EXTICR[1] |= (1 << (4-4)*4);
-  EXTI->RTSR |= (1 << 0) | (1 << 2) | (1 << 3) | (1 << 4);
-  EXTI->IMR |= (1 << 0) | (1 << 2) | (1 << 3) | (1 << 4);
-  NVIC->ISER[0] = (1 << EXTI0_1_IRQn) | (1 << EXTI2_3_IRQn) | (1 << EXTI4_15_IRQn);
+    // Enable SYSCFG clock (required for EXTI configuration)
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
+
+    // Configure EXTI lines 10 and 11 for port C
+    SYSCFG->EXTICR[2] &= ~(0xF << (2 * 4)); // Clear EXTI10 configuration bits
+    SYSCFG->EXTICR[2] &= ~(0xF << (3 * 4)); // Clear EXTI11 configuration bits
+    SYSCFG->EXTICR[2] |= (2 << (2 * 4));    // Map PC10 to EXTI10
+    SYSCFG->EXTICR[2] |= (2 << (3 * 4));    // Map PC11 to EXTI11
+
+    // Enable rising and falling trigger for EXTI10 and EXTI11
+    EXTI->RTSR |= (1 << 10) | (1 << 11);
+    // EXTI->FTSR |= (1 << 10) | (1 << 11);
+
+    // Unmask EXTI10 and EXTI11
+    EXTI->IMR |= (1 << 10) | (1 << 11);
+
+    // Enable the EXTI4_15 interrupt in the NVIC (EXTI10 and EXTI11 fall under this)
+    NVIC->ISER[0] = (1 << EXTI4_15_IRQn);
 }
 
 //==========================================================
@@ -131,85 +148,44 @@ void init_exti() {
 // it to be a function.
 // It should acknowledge the pending bit for pin 0, and 
 // it should call togglexn(GPIOB, 8).
-void EXTI0_1_IRQHandler() {
-  EXTI->PR = (1 << 0);
-  togglexn(GPIOB, 8);
-}
 
-//==========================================================
-// Write the EXTI interrupt handler for pins 2-3 below.
-// It should acknowledge the pending bit for pin 2, and 
-// it should call togglexn(GPIOB, 9).
-void EXTI2_3_IRQHandler() {
-  EXTI->PR = (1 << 2);
-  togglexn(GPIOB, 9);
-}
 
 //==========================================================
 // Write the EXTI interrupt handler for pins 4-15 below.
 // It should acknowledge the pending bit for pin 4, and 
 // it should call togglexn(GPIOB, 10).
+
 void EXTI4_15_IRQHandler() {
-  EXTI->PR = (1 << 4);
-  togglexn(GPIOB, 10);
+    // Check if EXTI10 caused the interrupt
+    if (EXTI->PR & (1 << 10)) {
+        EXTI->PR = (1 << 10);  // Clear the pending interrupt flag for EXTI10
+        // togglexn(GPIOB, 8);     // Call your function to toggle pin PB8
+        if (currentPage == 1)
+        {
+          currentPage = 2;
+        }
+        else{
+          currentPage = 1;
+        }
+        
+    }
+
+    // Check if EXTI11 caused the interrupt
+    if (EXTI->PR & (1 << 11)) {
+        EXTI->PR = (1 << 11);  // Clear the pending interrupt flag for EXTI11
+        if (currentPage == 3)
+        {
+          currentPage = 4;
+        }
+        else
+        {
+          currentPage = 3;
+        }
+    }
+  change_message(currentPage);
 }
 
 
-/**
- * @brief Enable the SysTick interrupt to occur every 1/16 seconds.
- * 
- */
-void init_systick() {
-  SysTick->LOAD = 375000 - 1;
-  SysTick->VAL = 0;
-  SysTick->CTRL &= ~SysTick_CTRL_CLKSOURCE_Msk;
-  // SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk;
-  SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
-}
-
-volatile int current_col = 1;
-
-/**
- * @brief The ISR for the SysTick interrupt.
- * 
- */
-void SysTick_Handler() {
-  int r = GPIOC->IDR & 0xf;
-  if ((current_col == 1) && (r & 8)) {
-      change_message("EQ");
-  } else if ((current_col == 2) && (r & 8)) {
-      change_message("Saturator");
-  } else if ((current_col == 3) && (r & 8)) {
-      // togglexn(GPIOC, 7);
-      change_message("Compressor");
-  } else if ((current_col == 4) && (r & 8)) {
-      // togglexn(GPIOC, 6);
-  }
-
-  current_col += 1;
-  if (current_col > 4)
-    current_col = 1;
-  set_col(current_col);
-}
-
-/**
- * @brief For the keypad pins, 
- *        Set the specified column level to logic "high".
- *        Set the other three three columns to logic "low".
- * 
- * @param col 
- */
-void set_col(int col) {
-  GPIOC->BRR = (1 << 4) | (1 << 5) | (1 << 6) | (1 << 7);
-  GPIOC->BSRR = (1 << (8-col));
-}
-
-/**
- * @brief Set the priority for EXTI pins 2-3 interrupt to 192.
- *        Set the priority for EXTI pins 4-15 interrupt to 128.
- *        Do not adjust the priority for any other interrupts.
- * 
- */
 void adjust_priorities() {
   NVIC_SetPriority(EXTI2_3_IRQn, 192 >> 6);
   NVIC_SetPriority(EXTI4_15_IRQn, 128 >> 6);
@@ -267,16 +243,23 @@ void spi1_enable_dma(void) {
 // 4.4 SPI OLED Display
 //===========================================================================
 void init_spi1() {
-    // PA5  SPI1_SCK
-    // PA7  SPI1_MOSI/SDI
+    // PB3  SPI1_SCK
+    // PB5  SPI1_MOSI/SDI
     // PA15 SPI1_NSS/CS
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+    RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
 
-    GPIOA->MODER &= ~0xc000fc00;
-    GPIOA->MODER |=  0x8a00a800;
+    // Configure PA15 for NSS
+    GPIOA->MODER &= ~(3 << (2 * 15));
+    GPIOA->MODER |= (2 << (2 * 15)); // Alternate function mode
+    GPIOA->AFR[1] &= ~(0xF << (4 * (15 - 8)));
+    // GPIOA->AFR[1] |= (0x0 << (4 * (15 - 8))); // AF0 for PA15 (SPI1_NSS)
 
-    GPIOA->AFR[0] &= ~0xfff00000;
-    GPIOA->AFR[1] &= ~0xf0000000;
+    // Configure PB3 and PB5 for SCK and MOSI respectively
+    GPIOB->MODER &= ~(3 << (2 * 3)) | ~(3 << (2 * 5));
+    GPIOB->MODER |= (2 << (2 * 3)) | (2 << (2 * 5)); // Alternate function mode
+    GPIOB->AFR[0] &= ~(0xF << (4 * 3)) | ~(0xF << (4 * 5));
+    // GPIOB->AFR[0] |= (0x0 << (4 * 3)) | (0x0 << (4 * 5)); // AF0 for PB3 and PB5 (SPI1_SCK, SPI1_MOSI)
 
     RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
@@ -329,16 +312,36 @@ void spi1_display2(const char *string) {
 }
 
 
-void change_message(const char* new_message) {
-    Setting = new_message;
+// settings[0]  - PA0 -> ADC_IN0
+// settings[1]  - PA1 -> ADC_IN1
+// settings[2]  - PA2 -> ADC_IN2
+// settings[3]  - PA3 -> ADC_IN3
+// settings[4]  - PA4 -> ADC_IN4
+// settings[5]  - PC0 -> ADC_IN10
+// settings[6]  - PC1 -> ADC_IN11
+// settings[7]  - PC2 -> ADC_IN12
+// settings[8]  - PC3 -> ADC_IN13
+// settings[9]  - PB0 -> ADC_IN8
+// settings[10] - PB1 -> ADC_IN9
+// settings[11] - PA6 -> ADC_IN6
+void change_message(int page) {
     char buffer[34];
     // Check if the message is "Saturator" or "Compressor" and append the correct setting
-    if (strcmp(new_message, "Saturator") == 0) {
-        snprintf(buffer, sizeof(buffer), "Saturator: %d", Settings[0]);  // Show Settings[0] for Saturator
-    } else if (strcmp(new_message, "Compressor") == 0) {
-        snprintf(buffer, sizeof(buffer), "Compressor: %d", Settings[1]); // Show Settings[1] for Compressor
-    } else {
-        strncpy(buffer, new_message, sizeof(buffer)); // Use the message as is for other cases
+    if (page == 1) {
+        //  snprintf(buffer, sizeof(buffer), "S1: %d %d %d %d %d", Settings[0], Settings[1], Settings[2], Settings[3], Settings[4]); // Show Settings[1] for Compressor
+         snprintf(buffer, sizeof(buffer), "PA0: %d", Settings[0]);
+    } else if (page == 2) {
+        snprintf(buffer, sizeof(buffer), "S2: %d %d", Settings[5], Settings[6]); //
+        // snprintf(buffer, sizeof(buffer), "S2");
+    }
+    else if (page == 3) {
+        snprintf(buffer, sizeof(buffer), "C1: %d %d %d", Settings[7], Settings[8], Settings[9]);
+    }
+    else if (page == 4) {
+        snprintf(buffer, sizeof(buffer), "C2: %d %d", Settings[10], Settings[11]);
+    }
+    else {
+        strncpy(buffer, "Press PB for SAT or COM", sizeof(buffer)); // Use the message as is for other cases
     }
     
     // Ensure the message is exactly 34 characters (padded with spaces if necessary)
@@ -361,34 +364,84 @@ void change_message(const char* new_message) {
 
 
 
+// settings[0]  - PA0 -> ADC_IN0
+// settings[1]  - PA1 -> ADC_IN1
+// settings[2]  - PA2 -> ADC_IN2
+// settings[3]  - PA3 -> ADC_IN3
+// settings[4]  - PA4 -> ADC_IN4
+// settings[5]  - PC0 -> ADC_IN10
+// settings[6]  - PC1 -> ADC_IN11
+// settings[7]  - PC2 -> ADC_IN12
+// settings[8]  - PC3 -> ADC_IN13
+// settings[9]  - PB0 -> ADC_IN8
+// settings[10] - PB1 -> ADC_IN9
+// settings[11] - PA6 -> ADC_IN6
 //This is all ADC for reading in extra
 void setup_adc(void) {
-    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
-    GPIOA->MODER |= GPIO_MODER_MODER1;  // PA1 analog
+
+    // Enable GPIOA, GPIOB, and GPIOC clocks
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN;
+    
+    // Enable ADC clock
     RCC->APB2ENR |= RCC_APB2ENR_ADCEN;
+    
+    // Configure PA0-4, PA6-7 for analog input
+    GPIOA->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1 | GPIO_MODER_MODER2 |
+                    GPIO_MODER_MODER3 | GPIO_MODER_MODER4 | GPIO_MODER_MODER6 | GPIO_MODER_MODER7;
+    
+    // Configure PB0 and PB1 for analog input (ADC_IN8 and ADC_IN9)
+    GPIOB->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1;
+    
+    // Configure PC0–PC3 for analog input (ADC_IN10 to ADC_IN13)
+    GPIOC->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1 | GPIO_MODER_MODER2;// | GPIO_MODER_MODER3;
+
+    // Turn on HSI14 clock for ADC
     RCC->CR2 |= RCC_CR2_HSI14ON;
     while(!(RCC->CR2 & RCC_CR2_HSI14RDY));
+    
+    // Set ADC resolution to 8 bits (RES = 0b10)
+    ADC1->CFGR1 &= ~ADC_CFGR1_RES;
+    ADC1->CFGR1 |= (0b10 << ADC_CFGR1_RES_Pos);  // Set 8-bit resolution
+
+    ADC1->SMPR &= ~0x7;  // <---This line needs to be removed DEBUGCODE
+
+    // Enable ADC
     ADC1->CR |= ADC_CR_ADEN;
     while(!(ADC1->ISR & ADC_ISR_ADRDY));
-    ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
+
+    // Configure all required ADC channels: PA0-4, PA6-7, PB0-1, and PC0-3
+    ADC1->CHSELR |= ADC_CHSELR_CHSEL0 | ADC_CHSELR_CHSEL1 | ADC_CHSELR_CHSEL2 |
+                    ADC_CHSELR_CHSEL3 | ADC_CHSELR_CHSEL4 | ADC_CHSELR_CHSEL6 | ADC_CHSELR_CHSEL7 |
+                    ADC_CHSELR_CHSEL8 | ADC_CHSELR_CHSEL9 | ADC_CHSELR_CHSEL10 | ADC_CHSELR_CHSEL11 |
+                    ADC_CHSELR_CHSEL12;// | ADC_CHSELR_CHSEL13;
     while(!(ADC1->ISR & ADC_ISR_ADRDY));
 }
+
 
 void TIM2_IRQHandler() {
     TIM2->SR &= ~TIM_SR_UIF;
+
+    int current_channel = activeSetting;
+
+    // Handle skipping PA5 by incrementing the channel index accordingly
+    if (activeSetting >= 5 && activeSetting <= 11) {
+        current_channel += 1; // Skip PA5 (ADC_IN5)
+    }
+
+    // Set ADC channel based on current setting
+    ADC1->CHSELR = (1 << current_channel);
     ADC1->CR |= ADC_CR_ADSTART;
-    while(!(ADC1->ISR & ADC_ISR_EOC));
-    
-    Settings[activeSetting] = (ADC1->DR/39);
 
-    change_message(Setting);
+    // Wait for conversion to complete and read value
+    while (!(ADC1->ISR & ADC_ISR_EOC));
+    Settings[activeSetting] = (ADC1->DR) / 2.56;  // Adjust scaling if needed
 
+    change_message(currentPage);
 
-    /**/
-    
-
-    activeSetting = (activeSetting + 1) %2;
+    // Move to the next setting
+    activeSetting = (activeSetting + 1) % 12;
 }
+
 
 
 
@@ -398,7 +451,7 @@ void TIM2_IRQHandler() {
 void init_tim2(void) {
     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
     TIM2->PSC = (48000 - 1);
-    TIM2->ARR = (1000 - 1);
+    TIM2->ARR = (100 - 1);
     TIM2->DIER |= TIM_DIER_UIE;
     TIM2->CR1 |= TIM_CR1_CEN;
     NVIC->ISER[0] = 1 << TIM2_IRQn;
