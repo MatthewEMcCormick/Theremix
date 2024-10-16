@@ -30,11 +30,11 @@ void togglexn(GPIO_TypeDef *port, int n) {
 
 int main(void) {
     internal_clock();  // Set clock
-    init_led();        // Initialize FRO (PA4 as output)
+    init_fixed_rate();        // Initialize FRO (PA4 as output)
 
     // Basic loop to toggle the FRO
     while (1) {
-        togglexn(GPIOA, 5);  // Toggle PA4 (VRO on/off)
+        togglexn(GPIOA, 4);  // Toggle PA4 (VRO on/off)
         nano_wait(1000000);  // Delay
     }
 }
