@@ -18,7 +18,8 @@ uint16_t saturator(int gainIn, float WD, int gainOut, int audio) //add curve
     float newAudioIn;
     float output;
 
-    //scale input between -1 and 1 (NOT )
+    //scale input between -1 and 1 for the tanh function
+    //makes it more sensative to changes.
     
     //multiply by gain value
     if(audio < 2047.5)
@@ -41,11 +42,11 @@ uint16_t saturator(int gainIn, float WD, int gainOut, int audio) //add curve
     }
     else
     {
-        output = 
+        output = output*2047.5+2047.5
     }
     //output = (uint16_t)((output + 1.0f) / 2.0f * 4095);
     
-    return output;
+    return (uint16_t)output;
 }
 //add gain IN paramter
 struct compP compressor(int WD, double threshold, double attack, double release, double ratio, double gainOut, struct compP comp)
