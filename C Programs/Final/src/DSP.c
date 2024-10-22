@@ -31,7 +31,6 @@ uint16_t saturator(int gainIn, float WD, int gainOut, int audio) //add curve
         newAudioIn = ((float)audio-2047.5)/2047.5
     }
     //newAudioIn = (float)audio / 4095.0f ; 
-    newAudioIn = (float)audio;
     //process in tan function 
     output = tanh(newAudioIn * WD/100*1000);
     //multiple by outGain value
