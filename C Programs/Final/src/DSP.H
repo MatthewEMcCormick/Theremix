@@ -1,4 +1,6 @@
-int saturator(int gainIn, int WD, int gainOut, int audio);
+#include <stdint.h>
+
+uint16_t saturator(int gainIn, float WD, int gainOut, int audio);
 struct compP compressor(int WD, double threshold, double attack, double release, double ratio, double gainOut, struct compP comp);
 struct compP
 {

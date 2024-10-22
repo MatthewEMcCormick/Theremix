@@ -1,5 +1,7 @@
 #include <math.h>
 #include "DSP.h"
+#include "stm32f4xx.h"
+#include <stdint.h>
 
 /*struct compP
 {
@@ -10,21 +12,40 @@
 };*/
 
 
-int saturator(int gainIn, int WD, int gainOut, int audio) //add curve
+uint16_t saturator(int gainIn, float WD, int gainOut, int audio) //add curve
 {
     //int scaleVal = 10;
-    double newAudioIn;
-    double output;
+    float newAudioIn;
+    float output;
+
     //scale input between -1 and 1 (NOT )
     
     //multiply by gain value
-    newAudioIn = gainIn * audio; 
+    if(audio < 2047.5)
+    {
+        newAudioIn = (float)audio/2047.5*-1
+    }
+    else
+    {
+        newAudioIn = ((float)audio-2047.5)/2047.5
+    }
+    //newAudioIn = (float)audio / 4095.0f ; 
+    newAudioIn = (float)audio;
     //process in tan function 
-    output = tanh(newAudioIn * WD/100);
+    output = tanh(newAudioIn * WD/100*1000);
     //multiple by outGain value
     output = output* gainOut;
-
-    return (int)output;
+    if(audio < 2047.5)
+    {
+        output = (float)(output*-1*2047.5)
+    }
+    else
+    {
+        output = 
+    }
+    //output = (uint16_t)((output + 1.0f) / 2.0f * 4095);
+    
+    return output;
 }
 //add gain IN paramter
 struct compP compressor(int WD, double threshold, double attack, double release, double ratio, double gainOut, struct compP comp)
