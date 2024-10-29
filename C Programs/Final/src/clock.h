@@ -1,0 +1,1 @@
+void internal_clock();

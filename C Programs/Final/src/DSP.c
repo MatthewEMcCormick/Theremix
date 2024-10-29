@@ -10,8 +10,34 @@
     int releaseAct;
     int audio;
 };*/
+//extern volatile float lookUp[300];
+volatile float lookUp[300];
+void initLookUpTan(void)
+{
+    for (int index = 0; index < 300; index++)
+    {
+        // Ensure floating-point division
+        float normalizedValue = (float)index / (300 - 1);
+        lookUp[index] = tanh(normalizedValue); // Calculate tanh for the normalized value
+    }
+}
 
+float lookUpTan(float audioVal)
+{
+    // Clamp audioVal to the range [0, 1]
+    if (audioVal < 0.0f) audioVal = 0.0f;
+    if (audioVal > 1.0f) audioVal = 1.0f;
 
+    // Calculate the index based on audioVal
+    int index = (int)(audioVal * (300 - 1) + 0.5f); // Round to nearest
+
+    // Clamp index to prevent out-of-bounds access
+    if (index < 0) index = 0;
+    if (index >= 300) index = 299; // Ensure it doesn't exceed the bounds
+
+    // Return the corresponding tanh value from the LUT
+    return lookUp[index];
+}
 uint16_t saturator(int gainIn, float WD, int gainOut, int audio) //add curve
 {
     //int scaleVal = 10;
@@ -22,31 +48,36 @@ uint16_t saturator(int gainIn, float WD, int gainOut, int audio) //add curve
     //makes it more sensative to changes.
     
     //multiply by gain value
-    if(audio < 2047.5)
+    /*if (audio < 1997.5) 
     {
-        newAudioIn = (float)audio/2047.5*-1
-    }
-    else
+        newAudioIn = (float)audio / 2047.5 * -1;  // Range: [-1, 0]
+    } 
+    else if(audio > 2097.5)
     {
-        newAudioIn = ((float)audio-2047.5)/2047.5
-    }
-    //newAudioIn = (float)audio / 4095.0f ; 
+        newAudioIn = (float)(audio - 2047.5) / 2047.5;  // Range: [0, 1]
+    }*/
+    newAudioIn = (float)audio / 4095.0f; 
     //process in tan function 
-    output = tanh(newAudioIn * WD/100*1000);
+    //output =1.0f / (1.0f + exp(-newAudioIn * WD/100)); //tanh(newAudioIn * WD/100.0f);
+    //output = tanh(newAudioIn * WD/100.0f);
+    output = lookUpTan(newAudioIn);
     //multiple by outGain value
-    output = output* gainOut;
-    if(audio < 2047.5)
+    /*if (audio < 1997.5) 
     {
-        output = (float)(output*-1*2047.5)
+        output = (float)(output*-1*2047.5);
     }
-    else
+    else if(audio > 2097.5)
     {
-        output = output*2047.5+2047.5
-    }
+        output = (output)*2047.5+2047.5;
+    }*/
+    output = output * 4095;  // Scale back to original range
+
+    // Clamp the output to prevent overflow
+
     //output = (uint16_t)((output + 1.0f) / 2.0f * 4095);
     
-    return (uint16_t)output;
-}
+    return output;
+}    
 //add gain IN paramter
 struct compP compressor(int WD, double threshold, double attack, double release, double ratio, double gainOut, struct compP comp)
 {

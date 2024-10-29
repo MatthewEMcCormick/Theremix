@@ -1,6 +1,8 @@
  #include "stm32f4xx.h"
 #include <stdint.h>
-
+#include "IO_DSP.h"
+#include "clock.h"
+#include "DSP.h"
 
 
 int activeSetting = 0;  // If running into errors, maybe make this volatile
@@ -16,11 +18,11 @@ void nano_wait(unsigned int n) {
 
 void init_fixed_rate(void) {
     // Enable GPIOA clock
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
 
     // Set PA4 as output (01 in MODER5)
-    GPIOA->MODER &= ~(3 << (4 * 2));  // Clear mode bits for PA5
-    GPIOA->MODER |= (1 << (4 * 2));   // Set PA5 to output mode
+    GPIOC->MODER &= ~(3 << (0 * 2));  // Clear mode bits for PA5
+    GPIOC->MODER |= (1 << (0 * 2));   // Set PA5 to output mode
 }
 
 void togglexn(GPIO_TypeDef *port, int n) {
@@ -30,11 +32,12 @@ void togglexn(GPIO_TypeDef *port, int n) {
 
 int main(void) {
     internal_clock();  // Set clock
-    init_fixed_rate();        // Initialize FRO (PA4 as output)
+    //init_fixed_rate();        // Initialize FRO (PA4 as output)
+    init_DSP();
 
-    // Basic loop to toggle the FRO
-    while (1) {
-        togglexn(GPIOA, 4);  // Toggle PA4 (VRO on/off)
-        nano_wait(1000000);  // Delay
+    while(1)
+    {
+        //togglexn(GPIOC, 0);
+        continue;
     }
 }
