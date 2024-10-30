@@ -3,7 +3,7 @@
 #include "IO_DSP.h"
 #include <math.h>
 #include "DSP.h"
-
+#include "global.h"
 void init_DSP()
 {
     init_GPIO();
@@ -12,6 +12,7 @@ void init_DSP()
     init_DAC();
     init_TIM2();
     initLookUpTan();
+    SCB->CPACR |= (0xF << 20);
 }
 void init_GPIO(void) {
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;  // Enable clock to the GPIOA
@@ -112,7 +113,7 @@ void TIM2_IRQHandler(void)
         //GPIOB->ODR ^= (1 << 7); 
         //saturator(1,100,5,ADC3->DR);
         
-        DAC->DHR12R2 = lookUp[295]* 4095;//saturator(1,100,5,ADC3->DR);//saturator(1,100,5,ADC3->DR);//saturator(1,100,5,ADC3->DR);//ADC3->DR;//ADC3->DR;// saturator(1,100,5,ADC3->DR); //saturator(1,100,5,ADC3->DR);//ADC3->DR;
+        DAC->DHR12R2 = (int)(lookUp[0]*4000.0f);//*4000.0 + .5);//(int)(lookUp[0]*4000.0 + .5);//lookUp[295]* 4095;//saturator(1,100,5,ADC3->DR); //ADC3->DR;
     }
     }
 }

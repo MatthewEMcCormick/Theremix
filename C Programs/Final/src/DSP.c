@@ -2,24 +2,19 @@
 #include "DSP.h"
 #include "stm32f4xx.h"
 #include <stdint.h>
+#include "global.h"
 
-/*struct compP
-{
-    int activated;
-    float currentGR;
-    int releaseAct;
-    int audio;
-};*/
 //extern volatile float lookUp[300];
-volatile float lookUp[300];
+
 void initLookUpTan(void)
 {
     for (int index = 0; index < 300; index++)
     {
         // Ensure floating-point division
-        float normalizedValue = (float)index / (300 - 1);
+        float normalizedValue = index / ((float)(300 - 1));
         lookUp[index] = tanh(normalizedValue); // Calculate tanh for the normalized value
     }
+    lookUp[0] = 1.0f;
 }
 
 float lookUpTan(float audioVal)

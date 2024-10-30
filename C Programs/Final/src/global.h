@@ -1,0 +1,1 @@
+extern float lookUp[300];

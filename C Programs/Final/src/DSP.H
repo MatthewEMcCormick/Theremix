@@ -6,7 +6,6 @@
 uint16_t saturator(int gainIn, float WD, int gainOut, int audio);
 struct compP compressor(int WD, double threshold, double attack, double release, double ratio, double gainOut, struct compP comp);
 void initLookUpTan(void);
-extern volatile float lookUp[300];
 struct compP
 {
     int activated;
