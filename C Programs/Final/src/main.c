@@ -129,15 +129,36 @@ void internal_clock() {
     while ((RCC->CFGR & (uint32_t)RCC_CFGR_SWS) != (uint32_t)RCC_CFGR_SWS_PLL); // Wait till PLL is used as system clock source
 }
 
+
+
+
+void toggle_pin(void) {
+    // Enable GPIOA clock
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+
+    // Set PA10 as output
+    GPIOA->MODER &= ~GPIO_MODER_MODER10;      // Clear mode bits
+    GPIOA->MODER |= GPIO_MODER_MODER10_0;     // Set as output
+
+    while (1) {
+        // Toggle PA5
+        GPIOA->ODR ^= GPIO_ODR_OD10;
+
+        // Delay to control toggle speed
+        // nano_wait(1000000);  // Adjust this delay for the frequency you need
+    }
+}
+
+
 // Main function
 int main(void) {
     internal_clock();         // Initialize system clock
-    init_spi4();             // Initialize SPI4
-    spi4_init_oled();        // Initialize OLED
+    // init_spi4();             // Initialize SPI4
+    // spi4_init_oled();        // Initialize OLED
 
-    // Display a message on the OLED
-    spi4_display1("Hello World!"); // Change this message as needed
-
+    // // Display a message on the OLED
+    // spi4_display1("Hello World!"); // Change this message as needed
+    toggle_pin();
     while(1) {
         asm("wfi");           // Enter sleep mode to save power
     }
