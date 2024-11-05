@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "IO_DSP.h"
-#include "clock.h"
 #include "DSP.h"
 #include "global.h"
 
@@ -82,11 +81,11 @@ void spi4_data(unsigned int data) {
 
 // Function to initialize the OLED display with SPI commands
 void spi4_init_oled() {
-    nano_wait(1000000);                     // Wait for power-up
+    nano_wait(1000000/7);                     // Wait for power-up
     spi4_cmd(0x38);                        // Function set
     spi4_cmd(0x08);                        // Display off
     spi4_cmd(0x01);                        // Clear display
-    nano_wait(2000000);                    // Wait for clear to complete
+    nano_wait(2000000/7);                    // Wait for clear to complete
     spi4_cmd(0x06);                        // Entry mode set
     spi4_cmd(0x02);  
     spi4_cmd(0x0C);                        // Display on
@@ -121,7 +120,7 @@ void internal_clock() {
                  | (96 << RCC_PLLCFGR_PLLN_Pos)  // PLLN = 96 (multiplier)
                  | (0 << RCC_PLLCFGR_PLLP_Pos)   // PLLP = 2 (output divider)
                  | (4 << RCC_PLLCFGR_PLLQ_Pos)   // PLLQ = 4 (USB OTG FS requires 48 MHz)
-                 | RCC_PLLCFGR_PLLSRC_HSI;       // Use HSI as PLL source
+                 | RCC_PLLCFGR_PLLSRC_HSI;       // Use HSI as PLL source // Use HSI as PLL source
     RCC->CR |= RCC_CR_PLLON;                // Enable PLL
     while((RCC->CR & RCC_CR_PLLRDY) == 0); // Wait till PLL is ready
     RCC->CFGR &= (uint32_t)(~RCC_CFGR_SW);
@@ -153,13 +152,13 @@ void toggle_pin(void) {
 // Main function
 int main(void) {
     internal_clock();         // Initialize system clock
-    // init_spi4();             // Initialize SPI4
-    // spi4_init_oled();        // Initialize OLED
-
+    //init_spi4();             // Initialize SPI4
+    //spi4_init_oled();        // Initialize OLED
+    init_DSP();
     // // Display a message on the OLED
-    // spi4_display1("Hello World!"); // Change this message as needed
-    toggle_pin();
+    //spi4_display1("Hello World!"); // Change this message as needed
+    //toggle_pin();
     while(1) {
-        asm("wfi");           // Enter sleep mode to save power
+        //asm("wfi");           // Enter sleep mode to save power
     }
 }

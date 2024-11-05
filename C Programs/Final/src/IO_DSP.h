@@ -4,4 +4,4 @@ void init_TIM5(void);
 void init_DAC(void);
 void init_TIM2();
 void init_DSP();
-
+void initLookUpTan(void);

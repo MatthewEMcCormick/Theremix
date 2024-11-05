@@ -10,66 +10,41 @@ void initLookUpTan(void)
 {
     for (int index = 0; index < 300; index++)
     {
-        // Ensure floating-point division
-        float normalizedValue = index / ((float)(300 - 1));
-        lookUp[index] = tanh(normalizedValue); // Calculate tanh for the normalized value
+        float step = index / ((float)(300 - 1));
+        lookUp[index] = (uint16_t)((float)tanh(step)*4095);
     }
-    lookUp[0] = 1.0f;
+    //lookUp[0] = 1000.0f;
 }
 
-float lookUpTan(float audioVal)
+uint16_t lookUpTan(int audioVal)
 {
-    // Clamp audioVal to the range [0, 1]
-    if (audioVal < 0.0f) audioVal = 0.0f;
-    if (audioVal > 1.0f) audioVal = 1.0f;
+    if (audioVal < 0) 
+    {
+        audioVal = 0;
+    }
+    if (audioVal > 4095) 
+    {
+        audioVal = 4095;
+    }
 
-    // Calculate the index based on audioVal
-    int index = (int)(audioVal * (300 - 1) + 0.5f); // Round to nearest
-
-    // Clamp index to prevent out-of-bounds access
-    if (index < 0) index = 0;
-    if (index >= 300) index = 299; // Ensure it doesn't exceed the bounds
-
-    // Return the corresponding tanh value from the LUT
+    //int index = (int)(audioVal * (300 - 1) + 0.5f);
+    int index = (int)((audioVal * 300 + 2047) / 4096);
     return lookUp[index];
 }
-uint16_t saturator(int gainIn, float WD, int gainOut, int audio) //add curve
+uint16_t saturator(int gainIn, int WD, int gainOut, int audio) //add curve
 {
     //int scaleVal = 10;
-    float newAudioIn;
-    float output;
+    uint16_t newAudioIn;
+    uint16_t output;
 
     //scale input between -1 and 1 for the tanh function
-    //makes it more sensative to changes.
-    
-    //multiply by gain value
-    /*if (audio < 1997.5) 
-    {
-        newAudioIn = (float)audio / 2047.5 * -1;  // Range: [-1, 0]
-    } 
-    else if(audio > 2097.5)
-    {
-        newAudioIn = (float)(audio - 2047.5) / 2047.5;  // Range: [0, 1]
-    }*/
-    newAudioIn = (float)audio / 4095.0f; 
+    newAudioIn = ((audio * WD * 41) >> 12);
     //process in tan function 
     //output =1.0f / (1.0f + exp(-newAudioIn * WD/100)); //tanh(newAudioIn * WD/100.0f);
     //output = tanh(newAudioIn * WD/100.0f);
-    output = lookUpTan(newAudioIn);
-    //multiple by outGain value
-    /*if (audio < 1997.5) 
-    {
-        output = (float)(output*-1*2047.5);
-    }
-    else if(audio > 2097.5)
-    {
-        output = (output)*2047.5+2047.5;
-    }*/
-    output = output * 4095;  // Scale back to original range
+    output = lookUpTan((int)newAudioIn);
+    output = output + ((audio *(100- WD) * 41) >> 12);
 
-    // Clamp the output to prevent overflow
-
-    //output = (uint16_t)((output + 1.0f) / 2.0f * 4095);
     
     return output;
 }    
