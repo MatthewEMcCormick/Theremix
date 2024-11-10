@@ -127,7 +127,20 @@ void TIM2_IRQHandler(void)
         //(Drive, WD, Curve) //Default 50
         //Settings[0] = 100;
         uint16_t sat = saturator(100,100,100,ADC3->DR);
-        uint16_t val = compressor(0, 0, Settings[6], 2, 1000, 0, 0,sat);
+        //compressor(Input Gain, Output Gain, Wet/Dry, ratio, threshold, attack, release, audio sample)
+        //upper ratio is 0-6 
+        /**
+         * Ratio 0 1 2 3 4 5 6 7 8 
+         * If(currentRatio >= Max Ratio)
+         * 
+         * 
+         * 
+         * if(c 
+         * 
+         */
+        //Settings from threshold should not be scaled to 0-100!!!!!!!!!!!!!!
+        //compressor(Input Gain, Output Gain, Wet/Dry, ratio, threshold, attack, release, audio sample)
+        uint16_t val = compressor(0, 0, Settings[6], 2, Settings[7], 0, 0,sat);
         DAC->DHR12R2 = val;//val;//saturator(50,50,100,ADC3->DR);
         
     }
@@ -201,7 +214,14 @@ void TIM3_IRQHandler() {
     newVal = (ADC1->DR * 100) >> 8;
     if(abs(Settings[activeSetting] - newVal) > 4)
     {
-        Settings[activeSetting] = newVal;
+        if(activeSetting == 7)
+        {
+            Settings[activeSetting] = ADC1->DR;
+        }
+        else
+        {
+            Settings[activeSetting] = newVal;
+        }
         
     }
     //Settings[activeSetting] = 100;
