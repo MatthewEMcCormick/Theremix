@@ -47,12 +47,21 @@ uint16_t saturator(int drive, int WD, int curve, int audio) //add curve
     uint16_t output;
     // 41 >> 12 is approximate divide by 100
     // Drive is percentage of wet effect that goes through
+    
     newAudioIn = ((audio * WD * 41) >> 12)*(drive * 41) >> 12;
+    /*if(newAudioIn > 4095 - 1861)
+    {
+        newAudioIn = 4095 - 1861;
+    }*/
     //newAudioIn = audio * (drive * 41) >> 12;
     //3 is max curve factor before issues are caused
     output = lookUpTan((int)newAudioIn, curve);
     output = output + ((audio *(100- WD) * 41) >> 12);
- 
+    
+    if(output > 1241)
+    {
+        output = 1241;
+    }
 
     return output;
 }    
@@ -68,11 +77,14 @@ uint16_t compressor(int inputGain, int outGain, int WD, int ratio, int thres, in
 {
     uint16_t output = 0;
     uint16_t newAudioIn = 0;
+    int postRatio = 0;
     newAudioIn = ((audio * WD * 41) >> 12);
     if(audio > thres)
     {
         uint16_t excess = newAudioIn - thres;
-        output = ((excess >> ratio) + thres);
+        //output = ((excess >> ratio) + thres);
+        postRatio = (excess)>>ratio;
+        output = (uint16_t)((postRatio) + (thres));
         /*if(output < thres)
         {
             output = (output * release * 41) >> 12;

@@ -63,7 +63,7 @@ void init_ADC(void)
 
 void init_TIM5(void) {
     RCC->APB1ENR |= RCC_APB1ENR_TIM5EN; // Enable Timer 3 clock
-    TIM5->PSC = 10 - 1;//96-1;  //samples at 5000hz * 2 so 10hz since 10k hz
+    TIM5->PSC = 30 - 1;//96-1;  //samples at 5000hz * 2 so 10hz since 10k hz
     TIM5->ARR = 10 - 1;//100-1;
     TIM5->DIER |= TIM_DIER_UIE;
     TIM5->CR1 |= TIM_CR1_CEN;
@@ -126,28 +126,71 @@ void TIM2_IRQHandler(void)
         //uint16_t val = (uint16_t)(lookUp[280]);
         //(Drive, WD, Curve) //Default 50
         //Settings[0] = 100;
-        uint16_t sat = saturator(100,100,100,ADC3->DR);
-        //compressor(Input Gain, Output Gain, Wet/Dry, ratio, threshold, attack, release, audio sample)
-        //upper ratio is 0-6 
+        //(assuming 1V offset for testing need to change to 1.5V (1861))
+        int scaleInput = ADC3->DR - 1861; //1861 shifts wave down by 1.5V to center around 0 for processing.
+        int preSat = 0;
+
+        //calculations only work on postive portion of a wave so have to invert any portion of sine wave below 0
+        if(scaleInput <=  0)
+        {
+            preSat = scaleInput * -1;
+        }
+        else
+        {
+            preSat = scaleInput;
+        }
+        uint16_t sat = saturator(100,50,100,preSat);
         /**
-         * Ratio 0 1 2 3 4 5 6 7 8 
+         * Ratio 0 1 2 3 4 
          * If(currentRatio >= Max Ratio)
          * 
          * 
          * 
-         * if(c 
+         *
          * 
          */
         //Settings from threshold should not be scaled to 0-100!!!!!!!!!!!!!!
         //compressor(Input Gain, Output Gain, Wet/Dry, ratio, threshold, attack, release, audio sample)
-        uint16_t val = compressor(0, 0, Settings[6], 2, Settings[7], 0, 0,sat);
-        DAC->DHR12R2 = val;//val;//saturator(50,50,100,ADC3->DR);
+        // Call setRatio before calling compressor to get target Ratio value from user Parameters. It returns the ratio value to pass to compressor function.
+        //currentRatio starts 
+
+
+        //scales threshold level from 0 - 2000 (0-1.6V) depedning on the user input.  
+        uint16_t thres = (Settings[6] * 2000 * 41) >> 12;
+
+        uint16_t comp = compressor(0, 0, 100, 4,thres, 0, 0,sat);
+
+        //reverts bottom half of wave back
+        if(scaleInput <=  0)
+        {
+            comp = comp * -1;
+        }
+        DAC->DHR12R2 = comp + 1861; // scalar 
         
     }
     }
 }
 
-
+uint16_t selectRatio(uint16_t ratio)
+{
+    if(ratio > 80)
+    {
+        return 4;
+    }
+    else if(ratio > 60)
+    {
+        return 3;
+    }
+    else if(ratio > 40)
+    {
+        return 2;
+    }
+    else if( ratio > 20)
+    {
+        return 1;
+    }
+    return 0;
+}
 void setup_adc(void) {
 
     // Enable GPIOA, GPIOB, and GPIOC clocks
@@ -211,19 +254,16 @@ void TIM3_IRQHandler() {
     while (!(ADC1->SR & ADC_SR_EOC));
    
     // Wait for conversion to complete and read value
+    
     newVal = (ADC1->DR * 100) >> 8;
     if(abs(Settings[activeSetting] - newVal) > 4)
     {
-        if(activeSetting == 7)
-        {
-            Settings[activeSetting] = ADC1->DR;
-        }
-        else
-        {
-            Settings[activeSetting] = newVal;
-        }
+        Settings[activeSetting] = newVal;
         
     }
+    
+    
+    
     //Settings[activeSetting] = 100;
     //Settings[activeSetting] = 100;
       // Adjust scaling if needed
