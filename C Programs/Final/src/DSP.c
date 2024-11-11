@@ -78,66 +78,26 @@ uint16_t compressor(int inputGain, int outGain, int WD, int ratio, int thres, in
     uint16_t output = 0;
     uint16_t newAudioIn = 0;
     int postRatio = 0;
-    newAudioIn = ((audio * WD * 41) >> 12);
+    newAudioIn = ((audio * inputGain * 41) >> 12);
+    newAudioIn = ((newAudioIn * WD * 41) >> 12);
     if(audio > thres)
     {
         uint16_t excess = newAudioIn - thres;
         //output = ((excess >> ratio) + thres);
-        postRatio = (excess)>>ratio;
-        output = (uint16_t)((postRatio) + (thres));
-        /*if(output < thres)
+        postRatio = (excess*128)>>ratio;
+        output = ((postRatio) + (thres*128)>>7);
+        if(output < thres)
         {
-            output = (output * release * 41) >> 12;
-        }*/
+            excess = thres - output;
+            postRatio = (excess*128)<<release;
+            output = ((postRatio) + (thres*128)>>7);
+        }
     }
     else
     {
         output = newAudioIn;
     }
     output = output + ((audio * (100 - WD) * 41) >> 12);
+    output =  (output * outGain * 41) >> 12;
     return output;
 }
-//Need More effiecient compressor function
-/*struct compP compressor(int WD, double threshold, double attack, double release, double ratio, double gainOut, struct compP comp)
-{
-    int output;
-    //need to set activated to zero in the intialization call
-    if(comp.activated != 1 && comp.audio > threshold)
-    {
-         comp.activated = 1;
-    }
-    if (comp.activated == 1)
-    {
-        output = comp.audio / comp.currentGR;
-       
-        if(comp.releaseAct == 0)
-        { 
-            if(comp.currentGR <= ratio)
-            {
-                comp.currentGR += (ratio/attack);
-            }
-            else if(comp.currentGR > ratio)
-            {
-                comp.currentGR = ratio;
-                comp.releaseAct = 1;
-            }
-        }
-        else
-        {
-            if(comp.currentGR > 1)
-            {
-                comp.currentGR -= (ratio/release);
-            }
-            else if(comp.currentGR < 1)
-            {
-                comp.currentGR= 1;
-                comp.releaseAct = 0;
-            }
-        }
-        
-    }
-    output = output * gainOut;
-    comp.audio = output;
-    return comp;
-    
-} */

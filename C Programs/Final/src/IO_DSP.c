@@ -10,6 +10,8 @@
 int activeSetting = 0;
 int newVal = 0;
 volatile int Settings[12];
+int attackAct =0;
+int attackCount = 0;
 void init_DSP()
 {
     initLookUpTan();
@@ -139,7 +141,7 @@ void TIM2_IRQHandler(void)
         {
             preSat = scaleInput;
         }
-        uint16_t sat = saturator(100,50,100,preSat);
+        uint16_t sat = saturator(100,0,100,preSat);
         /**
          * Ratio 0 1 2 3 4 
          * If(currentRatio >= Max Ratio)
@@ -156,9 +158,9 @@ void TIM2_IRQHandler(void)
 
 
         //scales threshold level from 0 - 2000 (0-1.6V) depedning on the user input.  
-        uint16_t thres = (Settings[6] * 2000 * 41) >> 12;
-
-        uint16_t comp = compressor(0, 0, 100, 4,thres, 0, 0,sat);
+        uint16_t thres = (Settings[7] * 3000 * 41) >> 12;
+        uint16_t targetRatio = selectRatio(Settings[6]);
+        uint16_t comp = compressor(100, 100, 100, targetRatio,thres, 0, 0,sat);
 
         //reverts bottom half of wave back
         if(scaleInput <=  0)
