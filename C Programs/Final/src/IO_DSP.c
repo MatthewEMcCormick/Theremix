@@ -10,6 +10,9 @@
 int activeSetting = 0;
 int newVal = 0;
 volatile int Settings[12];
+int numHighs = 0;
+int numInterupts = 0;
+
 
 void init_DSP()
 {
@@ -276,6 +279,16 @@ void TIM3_IRQHandler() {
 
     // Move to the next setting
     activeSetting = (activeSetting + 1) % 12;
+}
+
+void init_tim3(void) {
+    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+    TIM3->PSC = (3000 - 1);
+    TIM3->ARR = (10 - 1);
+    TIM3->DIER |= TIM_DIER_UIE;
+    TIM3->CR1 |= TIM_CR1_CEN;
+    NVIC_EnableIRQ(TIM3_IRQn);
+    NVIC_SetPriority(TIM3_IRQn,1);
 }
 
 void init_tim3(void) {
