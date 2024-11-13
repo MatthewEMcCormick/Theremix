@@ -8,3 +8,4 @@ void initLookUpTan(void);
 void init_tim3(void);
 void setup_adc();
 uint16_t selectRatio(uint16_t ratio);
+void togglexn(GPIO_TypeDef *port, int n);

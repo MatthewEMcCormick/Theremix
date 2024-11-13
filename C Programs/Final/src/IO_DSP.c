@@ -10,8 +10,7 @@
 int activeSetting = 0;
 int newVal = 0;
 volatile int Settings[12];
-int attackAct =0;
-int attackCount = 0;
+
 void init_DSP()
 {
     initLookUpTan();
@@ -24,15 +23,17 @@ void init_DSP()
     init_TIM2();
     
 }
-
+void togglexn(GPIO_TypeDef *port, int n) {
+  port->ODR ^= (1 << n);
+}
 void init_GPIO(void) {
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;  // Enable clock to the GPIOA
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOFEN;
-    //adc config 
+    //adc config // For FINAL version we want it to be PA0
     GPIOF->MODER &= ~(3 << (3 * 2));; //1111 1111 1111 1111 1111 1111 1111 1100
     GPIOF->MODER |= (3 << (3 * 2));    // Set PF3 to Analog mode
 
-    //dac config
+    //dac config // For FINAL version we want it to be PA5
     GPIOA->MODER &= ~(3 << (5 * 2));; //1111 1111 1111 1111 1111 1111 1111 1100
     GPIOA->MODER |= (3 << (5* 2));    // Set PA4 to Analog mode
 
@@ -144,16 +145,11 @@ void TIM2_IRQHandler(void)
         uint16_t sat = saturator(100,0,100,preSat);
         /**
          * Ratio 0 1 2 3 4 
-         * If(currentRatio >= Max Ratio)
-         * 
-         * 
-         * 
-         *
-         * 
+         
          */
         //Settings from threshold should not be scaled to 0-100!!!!!!!!!!!!!!
         //compressor(Input Gain, Output Gain, Wet/Dry, ratio, threshold, attack, release, audio sample)
-        // Call setRatio before calling compressor to get target Ratio value from user Parameters. It returns the ratio value to pass to compressor function.
+        // Call selectRatio before calling compressor to get target Ratio value from user Parameters. It returns the ratio value to pass to compressor function.
         //currentRatio starts 
 
 
@@ -167,7 +163,7 @@ void TIM2_IRQHandler(void)
         {
             comp = comp * -1;
         }
-        DAC->DHR12R2 = comp + 1861; // scalar 
+        DAC->DHR12R2 = comp + 1861; // shift back up to 1.5V
         
     }
     }
@@ -202,10 +198,12 @@ void setup_adc(void) {
     RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
     
     // Configure PA0-4, PA6-7 for analog input
+    // For FInal we want PA1-PA3, PA6-PA-7
     GPIOA->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1 | GPIO_MODER_MODER2 |
                     GPIO_MODER_MODER3 | GPIO_MODER_MODER4 | GPIO_MODER_MODER6 | GPIO_MODER_MODER7;
     
     // Configure PB0 and PB1 for analog input (ADC_IN8 and ADC_IN9)
+    //
     GPIOB->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1;
     
     // Configure PC0–PC3 for analog input (ADC_IN10 to ADC_IN13)
@@ -227,12 +225,7 @@ void setup_adc(void) {
     //wait for adc3
     for (int i = 0; i < 10000; i++); 
     //enable chanel
-    // Configure all required ADC channels: PA0-4, PA6-7, PB0-1, and PC0-3
-    //ADC1->SQR3 |= (0 << ADC_SQR3_SQ1_Pos) | (1 << ADC_SQR3_SQ2_Pos) | (2 << ADC_SQR3_SQ3_Pos)|(3 << ADC_SQR3_SQ4_Pos) | (4 << ADC_SQR3_SQ5_Pos)
-    //            | (6 << ADC_SQR3_SQ6_Pos);
-    //ADC1->SQR2 |= (7 << ADC_SQR2_SQ7_Pos) | (8 << ADC_SQR2_SQ8_Pos) | (9 << ADC_SQR2_SQ9_Pos) | (10 << ADC_SQR2_SQ10_Pos)
-    //                | (11 << ADC_SQR2_SQ11_Pos) | (12 << ADC_SQR2_SQ12_Pos); // | ADC_CHSELR_CHSEL13;
-    //wait
+    
     //for (int i = 0; i < 10000; i++); 
 }
 
