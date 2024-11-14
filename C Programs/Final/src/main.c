@@ -9,17 +9,9 @@
 
 void nano_wait(unsigned int n);
 // Function to initialize SPI4 for OLED
-void init_spi4(void);
+void init_spi1(void);
 // Function to send a command to the OLED
-void spi4_cmd(unsigned int data);
-// Function to send data to the OLED
-void spi4_data(unsigned int data);
-// Function to initialize the OLED display with SPI commands
-void spi4_init_oled(void);
-// Function to display a message on the first line of the OLED
-void spi4_display1(const char *string);
-// Function to display a message on the second line of the OLED
-void spi4_display2(const char *string);
+
 void internal_clock(void);
 
 
@@ -115,6 +107,9 @@ void init_spi1() {
     GPIOB->AFR[0] |= ((0x5 << 12) | (0x5 << 20));
 
 
+    GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_8 | GPIO_OTYPER_OT_9 | GPIO_OTYPER_OT_11 | GPIO_OTYPER_OT_3 | GPIO_OTYPER_OT_5);    // Set PB8 as push-pull
+    GPIOB->OSPEEDR |= GPIO_OSPEEDER_OSPEEDR8 | GPIO_OSPEEDER_OSPEEDR9| GPIO_OSPEEDER_OSPEEDR11 | GPIO_OSPEEDER_OSPEEDR3 | GPIO_OSPEEDER_OSPEEDR5; 
+
     //Probably dont need all the PB4 stuff
 
     RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
@@ -122,7 +117,7 @@ void init_spi1() {
     SPI1->CR1 &= ~SPI_CR1_SPE;
     SPI1->CR1 &= ~SPI_CR1_BR; //Testing different speeds, LCD wants 24Mhz
     // SPI4->CR1 |= 0x1<<3; // 6Mhz instead of 48, might need to make this flat 0 to be /3Mhz which is still *8 slower than the 24BR that we get on the STM32F091
-    SPI1->CR1 |= 0b001<<3;
+    SPI1->CR1 |= 0b000<<3;
     SPI1->CR1 |= SPI_CR1_MSTR;
 
     // SPI4->CR2 |= 0x0700; // This is 8 bit, the whole reason i have to switch
@@ -165,20 +160,30 @@ void internal_clock() {
 }
 
 
+
 // Main function
 int main(void) {
-    internal_clock();         // Initialize system clock
+    
+    internal_clock();
+    /*nano_wait(10000000000000000);
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+    GPIOB->MODER &= ~(GPIO_MODER_MODER8);
+    GPIOB->MODER |= (GPIO_MODER_MODER8_0);
+    GPIOB->ODR |= (1 << 8);
+    nano_wait(1000000000000000);
+    GPIOB->ODR ^= (1 << 8);*/
+             // Initialize system clock
     //init_DSP(); 
     init_spi1();
     LCD_Setup();
-    LCD_Clear(0xFFFF); // If the screen turns black, that means it's working.
+    LCD_Clear(RED); // If the screen turns black, that means it's working.
     // Insert your picture code here...
 
     LCD_DrawString(20,20, BLACK, WHITE, "SAT  1  2  3    Com  1  2  3", 16, 0);
     LCD_DrawFillRectangle(20, 100, 30, 200, RED); // chimneys
     LCD_DrawFillRectangle(35, 150, 45, 200, GREEN);
     LCD_DrawFillRectangle(50, 125, 60, 200, BLUE);
-    /*while(1) {
+    while(1) {
         //asm("wfi");           // Enter sleep mode to save power
-    }*/
+    }
 }

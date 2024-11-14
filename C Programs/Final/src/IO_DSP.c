@@ -291,12 +291,12 @@ void init_tim3(void) {
     NVIC_SetPriority(TIM3_IRQn,1);
 }
 
-void init_tim3(void) {
-    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
-    TIM3->PSC = (3000 - 1);
-    TIM3->ARR = (10 - 1);
-    TIM3->DIER |= TIM_DIER_UIE;
-    TIM3->CR1 |= TIM_CR1_CEN;
-    NVIC_EnableIRQ(TIM3_IRQn);
-    NVIC_SetPriority(TIM3_IRQn,1);
-}
+/*void init_tim9(void) {
+    RCC->APB2ENR |= RCC_APB2ENR_TIM9EN;
+    TIM9->PSC = (3000 - 1);
+    TIM9->ARR = (10 - 1);
+    TIM9->DIER |= TIM_DIER_UIE;
+    TIM9->CR1 |= TIM_CR1_CEN;
+    NVIC_EnableIRQ(TIM9_IRQn);
+    NVIC_SetPriority(TIM9_IRQn,1);
+}*/

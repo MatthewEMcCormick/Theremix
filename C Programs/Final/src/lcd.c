@@ -25,7 +25,7 @@ lcd_dev_t lcddev;
 #define RESET_BIT (1<<RESET_NUM)
 #define RESET_HIGH do { GPIOB->BSRR = GPIO_BSRR_BS_11; } while(0)
 #define RESET_LOW  do { GPIOB->BSRR = GPIO_BSRR_BR_11; } while(0)
-#define DC_NUM 14
+#define DC_NUM 9 //<---
 #define DC_BIT (1<<DC_NUM)
 #define DC_HIGH do { GPIOB->BSRR = GPIO_BSRR_BS_9; } while(0) //<---
 #define DC_LOW  do { GPIOB->BSRR = GPIO_BSRR_BR_9; } while(0) //<---
