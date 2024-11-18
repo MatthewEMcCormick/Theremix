@@ -17,12 +17,12 @@ int numInterupts = 0;
 void init_DSP()
 {
     initLookUpTan();
-    setup_adc();
-    init_tim3();
     init_GPIO();
+    setup_adc();
     init_ADC();
-    init_TIM5();
     init_DAC();
+    init_tim3();
+    init_TIM5();
     init_TIM2();
     
 }
@@ -75,7 +75,6 @@ void init_TIM5(void) {
     TIM5->CR1 |= TIM_CR1_CEN;
     NVIC_EnableIRQ(TIM5_IRQn);
     NVIC_SetPriority(TIM5_IRQn,2);
-    //NVIC->ISER[0] = 1 << TIM5_IRQn;
 }
 
 //adc interupt
@@ -123,11 +122,6 @@ void TIM2_IRQHandler(void)
     //{
     
     if (ADC3->SR & ADC_SR_EOC) {
-        /*if(ADC3->DR < 0)
-        {
-            GPIOB->ODR ^= (1 << 7); 
-        }*/
-        //GPIOB->ODR ^= (1 << 7); 
         
         //uint16_t val = (uint16_t)(lookUp[280]);
         //(Drive, WD, Curve) //Default 50
@@ -237,11 +231,6 @@ void TIM3_IRQHandler() {
 
     int current_channel = activeSetting;
 
-    // Handle skipping PA5 by incrementing the channel index accordingly
-    /*if (activeSetting >= 5 && activeSetting <= 11) {
-        current_channel += 1; // Skip PA5 (ADC_IN5)
-    }*/
-
     // Set ADC channel based on current settin
     ADC1->SQR3 = current_channel;
     ADC1->SQR1 &= ~ADC_SQR1_L;
@@ -291,12 +280,17 @@ void init_tim3(void) {
     NVIC_SetPriority(TIM3_IRQn,1);
 }
 
-/*void init_tim9(void) {
-    RCC->APB2ENR |= RCC_APB2ENR_TIM9EN;
-    TIM9->PSC = (3000 - 1);
-    TIM9->ARR = (10 - 1);
-    TIM9->DIER |= TIM_DIER_UIE;
-    TIM9->CR1 |= TIM_CR1_CEN;
-    NVIC_EnableIRQ(TIM9_IRQn);
-    NVIC_SetPriority(TIM9_IRQn,1);
+/*void init_tim7(void) {
+    RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
+    TIM6->PSC = (3000 - 1);
+    TIM6->ARR = (10 - 1);
+    TIM6->DIER |= TIM_DIER_UIE;
+    TIM6->CR1 |= TIM_CR1_CEN;
+    NVIC_EnableIRQ(TIM6_IRQn);
+    NVIC_SetPriority(TIM6_IRQn,2);
+}
+
+void TIM6_IRQHandler() {
+
+
 }*/

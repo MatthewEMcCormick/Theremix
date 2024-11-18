@@ -107,8 +107,8 @@ void init_spi1() {
     GPIOB->AFR[0] |= ((0x5 << 12) | (0x5 << 20));
 
 
-    GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_8 | GPIO_OTYPER_OT_9 | GPIO_OTYPER_OT_11 | GPIO_OTYPER_OT_3 | GPIO_OTYPER_OT_5);    // Set PB8 as push-pull
-    GPIOB->OSPEEDR |= GPIO_OSPEEDER_OSPEEDR8 | GPIO_OSPEEDER_OSPEEDR9| GPIO_OSPEEDER_OSPEEDR11 | GPIO_OSPEEDER_OSPEEDR3 | GPIO_OSPEEDER_OSPEEDR5; 
+    //GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_8 | GPIO_OTYPER_OT_9 | GPIO_OTYPER_OT_11 | GPIO_OTYPER_OT_3 | GPIO_OTYPER_OT_5);    // Set PB8 as push-pull
+    //GPIOB->OSPEEDR |= GPIO_OSPEEDER_OSPEEDR8 | GPIO_OSPEEDER_OSPEEDR9| GPIO_OSPEEDER_OSPEEDR11 | GPIO_OSPEEDER_OSPEEDR3 | GPIO_OSPEEDER_OSPEEDR5; 
 
     //Probably dont need all the PB4 stuff
 
@@ -164,26 +164,23 @@ void internal_clock() {
 // Main function
 int main(void) {
     
-    internal_clock();
-    /*nano_wait(10000000000000000);
+    //internal_clock();
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
-    GPIOB->MODER &= ~(GPIO_MODER_MODER8);
-    GPIOB->MODER |= (GPIO_MODER_MODER8_0);
-    GPIOB->ODR |= (1 << 8);
-    nano_wait(1000000000000000);
-    GPIOB->ODR ^= (1 << 8);*/
+    GPIOB->MODER &= ~(GPIO_MODER_MODER4 | GPIO_MODER_MODER5 | GPIO_MODER_MODER6|GPIO_MODER_MODER7);
+    GPIOB->MODER |= (GPIO_MODER_MODER5_0) | GPIO_MODER_MODER6_0| GPIO_MODER_MODER4_0 | GPIO_MODER_MODER7_0;
+    GPIOB->ODR |= (0xa << 4);
+    
              // Initialize system clock
     //init_DSP(); 
-    init_spi1();
+    /*init_spi1();
     LCD_Setup();
-    LCD_Clear(RED); // If the screen turns black, that means it's working.
+    //LCD_Clear(RED); // If the screen turns black, that means it's working.
     // Insert your picture code here...
-
     LCD_DrawString(20,20, BLACK, WHITE, "SAT  1  2  3    Com  1  2  3", 16, 0);
     LCD_DrawFillRectangle(20, 100, 30, 200, RED); // chimneys
     LCD_DrawFillRectangle(35, 150, 45, 200, GREEN);
-    LCD_DrawFillRectangle(50, 125, 60, 200, BLUE);
+    LCD_DrawFillRectangle(50, 125, 60, 200, BLUE);*/
     while(1) {
-        //asm("wfi");           // Enter sleep mode to save power
+        //asm("wfi");         // Enter sleep mode to save power
     }
 }
