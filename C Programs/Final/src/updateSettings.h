@@ -1,0 +1,18 @@
+void drawvert(int x, int y);
+void drawhorz(int x, int y);
+void DrawS(int offsetx, int offsety);
+void DrawA(int offsetx, int offsety);
+void DrawT(int offsetx, int offsety);
+void DrawU(int offsetx, int offsety);
+void DrawR(int offsetx, int offsety);
+void DrawP(int offsetx, int offsety);
+void DrawO(int offsetx, int offsety);
+void DrawC(int offsetx, int offsety);
+void DrawE(int offsetx, int offsety);
+void DrawM(int offsetx, int offsety);
+void Display_Top(char soc);
+void switchToCom();
+void switchToSat();
+void disp_sat(int setting1, int setting2, int setting3, int setting4, int setting5);
+void disp_com(int setting1, int setting2, int setting3, int setting4, int setting5);
+void nano_wait(unsigned int n);

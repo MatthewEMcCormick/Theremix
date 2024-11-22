@@ -50,6 +50,7 @@ uint16_t saturator(int drive, int WD, int curve, int audio) //add curve
     output = lookUpTan((int)newAudioIn, curve);
     output = output + ((audio *(100- WD) * 41) >> 12);
     
+    // Max output value of dac - offset value sample shifted by at start
     if(output > 1241)
     {
         output = 1241;
@@ -65,11 +66,12 @@ TODO:
     2.b Need to figure out how to reduce division and replace with bitshift for that.
 3. Implement Release
 */
-uint16_t compressor(int inputGain, int outGain, int WD, int ratio, int thres, int attack, int release, int audio)
+uint16_t compressor(int inputGain, int outGain, int WD, int ratio, int thres, int audio)
 {
     uint16_t output = 0;
     uint16_t newAudioIn = 0;
     int postRatio = 0;
+    //scaling for input gain
     newAudioIn = ((audio * inputGain * 41) >> 12);
     newAudioIn = ((newAudioIn * WD * 41) >> 12);
     if(audio > thres)
