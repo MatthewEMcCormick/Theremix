@@ -142,12 +142,10 @@ void TIM2_IRQHandler(void)
     //{
     
     if (ADC3->SR & ADC_SR_EOC) {
-        
-        //uint16_t val = (uint16_t)(lookUp[280]);
-        //(Drive, WD, Curve) //Default 50
-        //Settings[0] = 100;
+        //(Drive, WD, Curve) 
         //(assuming 1V offset for testing need to change to 1.5V (1861))
-        int scaleInput = ADC3->DR - 1861; //1861 shifts wave down by 1.5V to center around 0 for processing.
+        int inputOffset = 1861; // CHANGE THIS to what the input offset would be 
+        int scaleInput = ADC3->DR - inputOffset; //1861 shifts wave down by 1.5V to center around 0 for processing.
         int preSat = 0;
 
         //calculations only work on postive portion of a wave so have to invert any portion of sine wave below 0
@@ -159,29 +157,31 @@ void TIM2_IRQHandler(void)
         {
             preSat = scaleInput;
         }
-        uint16_t sat = saturator(100,100,100,preSat);
+        uint16_t sat = saturator(Settings[0]),Settings[1],Settings[2],preSat);
         /**
          * Ratio 0 1 2 3 4 
          
          */
         //Settings from threshold should not be scaled to 0-100!!!!!!!!!!!!!!
-        //compressor(Input Gain, Output Gain, Wet/Dry, ratio, threshold, attack, release, audio sample)
+        
         // Call selectRatio before calling compressor to get target Ratio value from user Parameters. It returns the ratio value to pass to compressor function.
         //currentRatio starts 
 
 
         //scales threshold level from 0 - 3000 (0-1.6V) depedning on the user input.  
-        uint16_t thres = (Settings[5] * 3000 * 41) >> 12;
+        uint16_t thres = (Settings[6] * 3000 * 41) >> 12;
+        //sets ratio to be max of 4 (Output was getting unstable otherwise)
         uint16_t targetRatio = selectRatio(Settings[7]);
-        // gainIn, gainOut, WD, targetRatio, thres sat
-        uint16_t comp = compressor(Settings[2], Settings[3], Settings[4], targetRatio,thres,sat);
+        //compressor(Input Gain, Output Gain, Wet/Dry, ratio, threshold, audio sample)
+        uint16_t comp = compressor(Settings[3], Settings[4], Settings[5], targetRatio,thres,sat);
 
-        //reverts bottom half of wave back
+        //reverts negative portion of wave back to negative
         if(scaleInput <=  0)
         {
             comp = comp * -1;
         }
-        DAC->DHR12R2 = (((comp) * volumeLevel * 1048) >> 12) + 1861; // shift back up to 1.5V  
+        volumeLevel = Settings[8];
+        DAC->DHR12R2 = (((comp) * volumeLevel * 41) >> 12) + inputOffset; // shift back up to 1.5V  
         //DAC->DHR12R2 = ADC3->DR;
         
     }
